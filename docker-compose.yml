@@ -1,0 +1,24 @@
+version: '3'
+
+services:
+  node:
+    image: ${NANO_IMAGE:-nano-node}
+    restart: "unless-stopped"
+    ports:
+      - "${NODE_PORT:-7075}:${NODE_PORT:-7075}" #tcp network traffic
+      - "127.0.0.1:${RPC_PORT:-7076}:${RPC_PORT:-7076}" #rpc to localhost only
+      - "127.0.0.1:${WS_PORT:-7078}:${WS_PORT:-7078}" #websocket to localhost only
+    volumes:
+      - ./config-node.toml:/root/Nano/config-node.toml
+      - ./config-rpc.toml:/root/Nano/config-rpc.toml
+      - "${NANO_DIR}:/root" #path to host data directory
+    command: nano_node daemon ${NODE_CLI} -l
+
+  prom-exporter:
+    image: ${PROM_IMAGE:-nano-prom-exporter}
+    restart: "unless-stopped"
+    network_mode: "host"
+    depends_on:
+      - node
+    pid: "service:node"
+    command: --host 127.0.0.1 --port ${RPC_PORT:-7076} --push_gateway http://127.0.0.1:9091 --interval 1 --hostname ${NAME:-nano-node} --runid_prefix ${NAME:-nano-node}
