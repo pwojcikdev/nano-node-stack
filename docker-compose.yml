@@ -11,8 +11,8 @@ services:
     volumes:
       - ./config-node.toml:/root/Nano/config-node.toml
       - ./config-rpc.toml:/root/Nano/config-rpc.toml
-      - "${NANO_DIR}:/root" #path to host data directory
-    command: nano_node daemon ${NODE_CLI} -l
+      - "${NANO_DIR:?missing NANO_DIR env}:/root" #path to host data directory
+    command: nano_node daemon ${NODE_CLI-} -l
 
   prom-exporter:
     image: ${PROM_IMAGE:-nano-prom-exporter}
