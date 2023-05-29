@@ -1,13 +1,32 @@
 version: '3'
 
 services:
+  wireguard:
+    image: linuxserver/wireguard
+    restart: unless-stopped
+    volumes:
+      - ./wg0.conf:/config/wg0.conf
+      - /lib/modules:/lib/modules
+    environment:
+      - PUID=1000
+      - PGID=1000
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    sysctls:
+      - net.ipv4.conf.all.src_valid_mark=1
+      - net.ipv6.conf.all.disable_ipv6=0
+    ports:
+      - "${NODE_PORT:-7075}:${NODE_PORT:-7075}" # live network
+      - "127.0.0.1:${RPC_PORT:-7076}:${RPC_PORT:-7076}" # rpc
+      - "127.0.0.1:${WS_PORT:-7078}:${WS_PORT:-7078}" # websockets
+
   node:
     image: ${NANO_IMAGE:-nano-node}
-    restart: "unless-stopped"
-    ports:
-      - "${NODE_PORT:-7075}:${NODE_PORT:-7075}" #tcp network traffic
-      - "127.0.0.1:${RPC_PORT:-7076}:${RPC_PORT:-7076}" #rpc to localhost only
-      - "127.0.0.1:${WS_PORT:-7078}:${WS_PORT:-7078}" #websocket to localhost only
+    restart: unless-stopped
+    network_mode: service:wireguard
+    depends_on:
+      - wireguard
     volumes:
       - ./config-node.toml:/root/Nano/config-node.toml
       - ./config-rpc.toml:/root/Nano/config-rpc.toml
@@ -17,8 +36,8 @@ services:
   prom-exporter:
     image: pwojcikdev/nano-prom-exporter
     restart: "unless-stopped"
-    network_mode: "host"
+    network_mode: host
     depends_on:
       - node
-    pid: "service:node"
+    pid: service:node
     command: --host 127.0.0.1 --port ${RPC_PORT:-7076} --push_gateway http://127.0.0.1:9091 --interval 1 --hostname ${NAME:-nano-node} --runid_prefix ${NAME:-nano-node}
