@@ -15,7 +15,7 @@ services:
     command: nano_node daemon --network=${NETWORK:-live} --data_path=/root/Nano ${NODE_CLI-} -l
 
   prom-exporter:
-    image: ${PROM_IMAGE:-nano-prom-exporter}
+    image: pwojcikdev/nano-prom-exporter
     restart: "unless-stopped"
     network_mode: "host"
     depends_on:
